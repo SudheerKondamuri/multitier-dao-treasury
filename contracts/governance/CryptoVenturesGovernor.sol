@@ -128,7 +128,9 @@ contract CryptoVenturesGovernor is IGovernor, GovernorSettings, GovernorCounting
      */
     function queue(uint256 proposalId, address target, uint256 value, bytes calldata data, bytes32 salt) external {
         require(state(proposalId) == ProposalState.Succeeded, "Governor: proposal not successful");
-        timelock.schedule(target, value, data, bytes32(0), salt, 0); 
+        ProposalCore storage proposal = _proposals[proposalId];
+        IFundPolicy.Tier memory tier = fundPolicy.getTierForAmount(proposal.amount);
+        timelock.schedule(target, value, data, bytes32(0), salt, tier.executionDelay); 
     }
 
     function execute(uint256 proposalId) external payable override {

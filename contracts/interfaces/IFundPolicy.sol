@@ -10,6 +10,7 @@ interface IFundPolicy {
         uint256 minQuorum;     // Minimum weighted votes required (in basis points, e.g., 400 = 4%)
         uint256 votingPeriod;  // How long the vote lasts (in blocks)
         uint256 maxAmount;     // Maximum fund amount for this specific tier
+        uint256 executionDelay;
     }
 
     /**

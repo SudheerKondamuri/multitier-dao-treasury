@@ -52,7 +52,7 @@ contract GovernanceToken is ERC20, ERC20Permit, ERC20Votes {
         view
         override(
             ERC20Permit,
-            Nonces // Change 'Nones' to 'Nonces'
+            Nonces 
         )
         returns (uint256)
     {

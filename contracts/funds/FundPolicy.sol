@@ -14,8 +14,8 @@ contract FundPolicy is IFundPolicy {
     // Ordered list of tiers from smallest to largest amount
     Tier[] private _tiers;
 
-    event TierUpdated(uint256 indexed index, uint256 minQuorum, uint256 votingPeriod, uint256 maxAmount);
-    event TierAdded(uint256 minQuorum, uint256 votingPeriod, uint256 maxAmount);
+    event TierUpdated(uint256 indexed index, uint256 minQuorum, uint256 votingPeriod, uint256 maxAmount,uint256 executionDelay);
+    event TierAdded(uint256 minQuorum, uint256 votingPeriod, uint256 maxAmount,uint256 executionDelay);
 
     /**
      * @param _accessControl The address of the DAOAccessControl contract.
@@ -25,13 +25,13 @@ contract FundPolicy is IFundPolicy {
         
         // Initializing with default tiers as per typical DAO standards:
         // Tier 0: Small Grants (up to 10 ETH) - 4% quorum, 3 days voting
-        _addTier(400, 21600, 10 ether); 
+        _addTier(400, 21600, 10 ether,3600); 
         
         // Tier 1: Mid-Sized (up to 100 ETH) - 10% quorum, 7 days voting
-        _addTier(1000, 50400, 100 ether);
+        _addTier(1000, 50400, 100 ether,86400);
         
         // Tier 2: Large Investment (Unlimited) - 20% quorum, 14 days voting
-        _addTier(2000, 100800, type(uint256).max);
+        _addTier(2000, 100800, type(uint256).max,259200);
     }
 
     /**
@@ -50,14 +50,14 @@ contract FundPolicy is IFundPolicy {
      * @notice Allows the DAO to add a new tier.
      * @dev Restricted to the DEFAULT_ADMIN_ROLE (the DAO itself).
      */
-    function addTier(uint256 minQuorum, uint256 votingPeriod, uint256 maxAmount) external {
+    function addTier(uint256 minQuorum, uint256 votingPeriod, uint256 maxAmount,uint256 executionDelay) external {
         require(accessControl.hasRole(accessControl.DEFAULT_ADMIN_ROLE(), msg.sender), "FundPolicy: Restricted to Admin");
-        _addTier(minQuorum, votingPeriod, maxAmount);
+        _addTier(minQuorum, votingPeriod, maxAmount,executionDelay);
     }
 
-    function _addTier(uint256 minQuorum, uint256 votingPeriod, uint256 maxAmount) internal {
-        _tiers.push(Tier(minQuorum, votingPeriod, maxAmount));
-        emit TierAdded(minQuorum, votingPeriod, maxAmount);
+    function _addTier(uint256 minQuorum, uint256 votingPeriod, uint256 maxAmount,uint256 executionDelay) internal {
+        _tiers.push(Tier(minQuorum, votingPeriod, maxAmount,executionDelay));
+        emit TierAdded(minQuorum, votingPeriod, maxAmount,executionDelay);
     }
 
     function getTotalTiers() external view returns (uint256) {
