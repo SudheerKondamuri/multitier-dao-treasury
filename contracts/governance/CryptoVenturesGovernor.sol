@@ -11,11 +11,15 @@ import {IVotes} from "../interfaces/IVotes.sol";
 
 /**
  * @title CryptoVenturesGovernor
- * @dev The core governance contract that integrates multi-tier fund policies 
+ * @dev The core governance contract that integrates multi-tier fund policies
  * and square-root weighted (anti-whale) voting math.
  */
-contract CryptoVenturesGovernor is IGovernor, GovernorSettings, GovernorCounting, GovernorDelegation {
-    
+contract CryptoVenturesGovernor is
+    IGovernor,
+    GovernorSettings,
+    GovernorCounting,
+    GovernorDelegation
+{
     struct ProposalCore {
         uint256 voteStart;
         uint256 voteEnd;
@@ -38,9 +42,9 @@ contract CryptoVenturesGovernor is IGovernor, GovernorSettings, GovernorCounting
         address _token,
         address payable _timelock,
         address _fundPolicy
-    ) 
+    )
         GovernorSettings(_accessControl, _fundPolicy, 7200) // Default 1-day delay (7200 blocks)
-        GovernorDelegation(IVotes(_token)) 
+        GovernorDelegation(IVotes(_token))
     {
         timelock = ITimelock(_timelock);
     }
@@ -62,9 +66,18 @@ contract CryptoVenturesGovernor is IGovernor, GovernorSettings, GovernorCounting
 
         // Fetch Tier-based rules (Quorum and Voting Period) from the FundPolicy
         IFundPolicy.Tier memory tier = fundPolicy.getTierForAmount(totalValue);
-        
-        proposalId = uint256(keccak256(abi.encode(targets, values, calldatas, keccak256(bytes(description)))));
-        
+
+        proposalId = uint256(
+            keccak256(
+                abi.encode(
+                    targets,
+                    values,
+                    calldatas,
+                    keccak256(bytes(description))
+                )
+            )
+        );
+
         ProposalCore storage proposal = _proposals[proposalId];
         require(proposal.voteStart == 0, "Governor: proposal already exists");
 
@@ -85,38 +98,69 @@ contract CryptoVenturesGovernor is IGovernor, GovernorSettings, GovernorCounting
     /**
      * @notice Casts a vote using the anti-whale weighted power logic.
      */
-    function castVote(uint256 proposalId, uint8 support) external override returns (uint256 weight) {
-        require(state(proposalId) == ProposalState.Active, "Governor: voting is closed");
+    function castVote(
+        uint256 proposalId,
+        uint8 support
+    ) external override returns (uint256 weight) {
+        require(
+            state(proposalId) == ProposalState.Active,
+            "Governor: voting is closed"
+        );
         ProposalCore storage proposal = _proposals[proposalId];
 
         // Retrieve raw token balance at the block the proposal was created (snapshot)
         uint256 rawStake = getRawStake(msg.sender, proposal.voteStart);
-        require(rawStake > 0, "Governor: only token holders with stake can vote");
+        require(
+            rawStake > 0,
+            "Governor: only token holders with stake can vote"
+        );
 
         // Use inherited internal logic to calculate sqrt(stake) and tally the vote
         _countVote(proposalId, msg.sender, support, rawStake);
-        
+
         return rawStake;
+    }
+
+    /**
+     * @notice Returns the total weighted voting power available at a specific block.
+     * @dev Required for accurate quorum calculations in the Governor.
+     */
+    function getPastTotalWeightedSupply(
+        uint256 timepoint
+    ) public view returns (uint256) {
+        // 1. Retrieve the raw total supply of tokens at the snapshot block
+        uint256 rawTotalSupply = getPastTotalSupply(timepoint);
+
+        // 2. Apply the square-root math to the total supply to get the "Weighted" total
+        // This ensures the quorum is relative to the actual power, not just token count.
+        return VotingPowerMath.calculatePower(rawTotalSupply);
     }
 
     /**
      * @notice Returns the current state of a proposal.
      * @dev Integrates internal quorum and success checks from GovernorCounting.
      */
-    function state(uint256 proposalId) public view override returns (ProposalState) {
+    function state(
+        uint256 proposalId
+    ) public view override returns (ProposalState) {
         ProposalCore storage proposal = _proposals[proposalId];
         if (proposal.canceled) return ProposalState.Canceled;
         if (proposal.executed) return ProposalState.Executed;
         if (block.number <= proposal.voteStart) return ProposalState.Pending;
         if (block.number <= proposal.voteEnd) return ProposalState.Active;
 
-        IFundPolicy.Tier memory tier = fundPolicy.getTierForAmount(proposal.amount);
-        
+        IFundPolicy.Tier memory tier = fundPolicy.getTierForAmount(
+            proposal.amount
+        );
+
         // Fetch weighted total supply at snapshot for accurate quorum calculation
         // In production, this would use token.getPastTotalWeightedSupply(proposal.voteStart)
-        uint256 totalWeightedSupply = 1000000; 
+        uint256 totalWeightedSupply = 1000000;
 
-        if (_quorumReached(proposalId, totalWeightedSupply, tier.minQuorum) && _voteSucceeded(proposalId)) {
+        if (
+            _quorumReached(proposalId, totalWeightedSupply, tier.minQuorum) &&
+            _voteSucceeded(proposalId)
+        ) {
             return ProposalState.Succeeded;
         } else {
             return ProposalState.Defeated;
@@ -126,11 +170,29 @@ contract CryptoVenturesGovernor is IGovernor, GovernorSettings, GovernorCounting
     /**
      * @notice Sends a successful proposal to the Timelock for the mandatory delay period.
      */
-    function queue(uint256 proposalId, address target, uint256 value, bytes calldata data, bytes32 salt) external {
-        require(state(proposalId) == ProposalState.Succeeded, "Governor: proposal not successful");
+    function queue(
+        uint256 proposalId,
+        address target,
+        uint256 value,
+        bytes calldata data,
+        bytes32 salt
+    ) external {
+        require(
+            state(proposalId) == ProposalState.Succeeded,
+            "Governor: proposal not successful"
+        );
         ProposalCore storage proposal = _proposals[proposalId];
-        IFundPolicy.Tier memory tier = fundPolicy.getTierForAmount(proposal.amount);
-        timelock.schedule(target, value, data, bytes32(0), salt, tier.executionDelay); 
+        IFundPolicy.Tier memory tier = fundPolicy.getTierForAmount(
+            proposal.amount
+        );
+        timelock.schedule(
+            target,
+            value,
+            data,
+            bytes32(0),
+            salt,
+            tier.executionDelay
+        );
     }
 
     function execute(uint256 proposalId) external payable override {
