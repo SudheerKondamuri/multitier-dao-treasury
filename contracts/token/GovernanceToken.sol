@@ -16,25 +16,27 @@ contract GovernanceToken is ERC20, ERC20Permit, ERC20Votes {
         ERC20("CryptoVentures Token", "CVT")
         ERC20Permit("CryptoVentures Token")
     {
-        // Initial supply for testing; in production, this might be controlled by a DAO or crowdsale
         _mint(msg.sender, 1000000 * 10 ** decimals());
     }
 
     /**
      * @notice Returns the weighted voting power for an account at a specific block.
-     * @dev Uses the Babylonian square root method from VotingPowerMath to prevent whale dominance.
-     * @param account The address to check power for.
-     * @param timepoint The block number or timestamp to check (depends on OZ version configuration).
      */
     function getWeightedVotingPower(
         address account,
         uint256 timepoint
     ) public view returns (uint256) {
-        // Retrieve the raw balance (stake) at the specific block/timepoint
         uint256 rawStake = getPastVotes(account, timepoint);
-
-        // Apply the square root logic from the library
         return VotingPowerMath.calculatePower(rawStake);
+    }
+
+    /**
+     * @notice Returns the weighted total supply at a block for quorum calculations.
+     * @dev Applies SQRT logic to the total supply to remain consistent with individual weights.
+     */
+    function getPastTotalWeightedSupply(uint256 timepoint) public view returns (uint256) {
+        uint256 rawTotalSupply = getPastTotalSupply(timepoint);
+        return VotingPowerMath.calculatePower(rawTotalSupply);
     }
 
     function _update(

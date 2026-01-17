@@ -15,4 +15,9 @@ interface IVotes {
      * @notice Returns the raw token balance for an account at a specific block.
      */
     function getPastVotes(address account, uint256 timepoint) external view returns (uint256);
+
+    /**
+     * @notice Returns the total supply (or weighted total) at a specific block.
+     */
+    function getPastTotalWeightedSupply(uint256 timepoint) external view returns (uint256);
 }
