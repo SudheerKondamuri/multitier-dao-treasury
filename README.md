@@ -1,66 +1,111 @@
-## Foundry
+# Multi-Tier DAO Treasury
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+## Project Overview
+The **Multi-Tier DAO Treasury** is a decentralized governance system designed for advanced treasury management. It integrates multi-tier fund policies where quorums and voting periods scale dynamically based on the amount of funds requested. To prevent governance capture by large holders, the system utilizes square-root weighted (anti-whale) voting math.
 
-Foundry consists of:
+---
 
-- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
-- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
-- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
-- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+## Table of Contents
+- [Features](#features)
+- [Technical Stack](#technical-stack)
+- [Repository Structure](#repository-structure)
+- [Setup and Installation](#setup-and-installation)
+- [Usage](#usage)
+- [Evaluation and Testing](#evaluation-and-testing)
+- [License](#license)
 
-## Documentation
+---
 
-https://book.getfoundry.sh/
+## Features
+- **Multi-Tier Fund Policy**: Spending rules (minimum quorum, voting period, and execution delay) are dynamically determined by proposal value.
+- **Anti-Whale Voting**: Square-root weighted voting power using the Babylonian method ensures fair influence distribution.
+- **Role-Based Access Control (RBAC)**: A centralized *Registry of Truth* (`DAOAccessControl`) manages permissions for proposers, executors, and cancellers.
+- **Timelock Enforcement**: `TreasuryTimelock` enforces mandatory delays and acts as the vault owner.
+- **Decentralized Vault**: Secure asset storage permitting withdrawals only through governance-approved execution.
+
+---
+
+## Technical Stack
+- **Language**: Solidity ^0.8.20
+- **Framework**: Foundry
+- **Libraries**: OpenZeppelin Contracts v5.5.0  
+  (AccessControl, ERC20, TimelockController)
+
+---
+
+## Repository Structure
+```
+contracts/
+├─ access/        # Role-based access control management
+├─ funds/         # Multi-tier policy implementation
+├─ governance/    # Governor logic, counting & delegation modules
+├─ interfaces/    # Standardized system interfaces
+├─ libraries/     # Internal math utilities for quadratic voting
+├─ token/         # Governance token with snapshot & weighted voting
+├─ treasury/      # Vault and Timelock infrastructure
+
+scripts/          # Deployment and orchestration scripts
+test/             # Comprehensive lifecycle & security test suites
+```
+
+---
+
+## Setup and Installation
+
+### Prerequisites
+- Foundry installed
+
+### Installation
+Clone the repository and install dependencies:
+
+```sh
+forge install
+```
+
+---
 
 ## Usage
 
-### Build
+### Compilation
+Build smart contracts and generate artifacts:
 
-```shell
-$ forge build
+```sh
+forge build
 ```
 
-### Test
+### Testing
+Run the full test suite with verbose output:
 
-```shell
-$ forge test
+```sh
+forge test -vvv
 ```
 
-### Format
+### Deployment
+Deploy the complete DAO ecosystem:
 
-```shell
-$ forge fmt
+```sh
+forge script scripts/Deploy.s.sol:DeployDAO \
+  --rpc-url <YOUR_RPC_URL> \
+  --private-key <YOUR_PRIVATE_KEY> \
+  --broadcast
 ```
 
-### Gas Snapshots
+---
 
-```shell
-$ forge snapshot
-```
+## Evaluation and Testing
+The project includes automated tests designed to satisfy high-security standards:
 
-### Anvil
+- **DAOLifecycleTest**
+  - Draft → Active → Succeeded → Queued → Executed
 
-```shell
-$ anvil
-```
+- **GovernanceSecurityTest**
+  - Anti-whale voting verification
+  - Double-voting prevention
+  - Role authorization enforcement
 
-### Deploy
+---
 
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
 
-### Cast
 
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+## License
+This project is released under the MIT License.
